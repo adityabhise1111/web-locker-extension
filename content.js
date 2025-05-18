@@ -2,99 +2,87 @@
   const PASSWORD = "#99#";
   const SESSION_KEY = "warsaw_unlocked";
 
-  let overlay = null;
-  let initialized = false;
+  function createLocker() {
+    // Already unlocked for this session?
+    if (sessionStorage.getItem(SESSION_KEY) === "true") return;
 
-  function addLocker() {
-    if (sessionStorage.getItem(SESSION_KEY) === "true") return; // Skip if already unlocked
+    // Prevent duplicate overlays
+    if (document.getElementById("locker-overlay")) return;
 
-    if (initialized) return;
-    initialized = true;
+    // Create overlay
+    const overlay = document.createElement("div");
+    overlay.id = "locker-overlay";
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85); z-index: 99999;
+      display: flex; justify-content: center; align-items: center;
+    `;
 
-    overlay = document.createElement('div');
-    overlay.id = 'locker-overlay';
+    // Container
+    const container = document.createElement("div");
+    container.style.cssText = "text-align: center;";
 
-    const container = document.createElement('div');
-    container.id = 'locker-container';
+    const input = document.createElement("input");
+    input.type = "password";
+    input.placeholder = "Not Allowed Here!";
+    input.style.cssText = "padding: 10px; font-size: 18px; border-radius: 5px;";
 
-    const input = document.createElement('input');
-    input.type = 'password';
-    input.id = 'locker-password';
-    input.placeholder = 'Not Allowed Here!';
-    input.className = 'form-control fs-5';
-
-    const message = document.createElement('div');
-    message.id = 'locker-message';
-    message.className = 'mt-3 text-danger fw-bold';
+    const message = document.createElement("div");
+    message.style.cssText = "color: red; margin-top: 10px; font-weight: bold;";
 
     container.appendChild(input);
     container.appendChild(message);
     overlay.appendChild(container);
     document.body.appendChild(overlay);
 
-    input.focus();
-
+    // Blur page content
     Array.from(document.body.children).forEach(child => {
       if (child !== overlay) {
-        child.style.filter = 'blur(5px)';
-        child.style.pointerEvents = 'none';
+        child.style.filter = "blur(5px)";
+        child.style.pointerEvents = "none";
       }
     });
 
-    function unlock() {
-      sessionStorage.setItem(SESSION_KEY, "true");
-      if (overlay && overlay.parentElement) {
-        overlay.remove();
-        Array.from(document.body.children).forEach(child => {
-          child.style.filter = '';
-          child.style.pointerEvents = '';
-        });
-        initialized = false;
-      }
-    }
+    input.focus();
 
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
         if (input.value === PASSWORD) {
-          unlock();
+          sessionStorage.setItem(SESSION_KEY, "true");
+          overlay.remove();
+          Array.from(document.body.children).forEach(child => {
+            child.style.filter = "";
+            child.style.pointerEvents = "";
+          });
         } else {
-          message.textContent = 'Incorrect password. Try again.';
-          input.value = '';
+          message.textContent = "Incorrect password. Try again.";
+          input.value = "";
         }
       }
     });
 
-    overlay.addEventListener('click', function (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }, true);
-
-    window.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-      }
+    overlay.addEventListener("click", e => e.stopPropagation(), true);
+    window.addEventListener("keydown", e => {
+      if (e.key === "Escape") e.preventDefault();
     }, true);
   }
 
-  function initLockerOnRouteChange() {
-    let lastUrl = location.href;
-    new MutationObserver(() => {
-      const currentUrl = location.href;
-      if (currentUrl !== lastUrl) {
-        lastUrl = currentUrl;
-        // You can add fine-grained URL filtering here
-        if (
-          currentUrl.includes('chatgpt.com') ||
-          currentUrl.includes('chat.openai.com') ||
-          currentUrl.includes('youtube.com') ||
-          currentUrl.includes('m.youtube.com')
-        ) {
-          addLocker();
-        }
+  function watchRouteChanges() {
+    let currentUrl = location.href;
+    const observer = new MutationObserver(() => {
+      if (location.href !== currentUrl) {
+        currentUrl = location.href;
+        sessionStorage.removeItem(SESSION_KEY); // Optional: re-lock on navigation
+        createLocker();
       }
-    }).observe(document, { subtree: true, childList: true });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  addLocker();
-  initLockerOnRouteChange();
+  // Run on first load
+  createLocker();
+
+  // Watch for URL changes (SPA handling)
+  watchRouteChanges();
 })();
