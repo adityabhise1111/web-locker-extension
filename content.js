@@ -2,14 +2,13 @@
   const PASSWORD = "#99#";
   const SESSION_KEY = "warsaw_unlocked";
 
-  function createLocker() {
-    // Already unlocked for this session?
+  function injectLocker() {
+    // If already unlocked in session
     if (sessionStorage.getItem(SESSION_KEY) === "true") return;
 
-    // Prevent duplicate overlays
+    // If overlay already exists
     if (document.getElementById("locker-overlay")) return;
 
-    // Create overlay
     const overlay = document.createElement("div");
     overlay.id = "locker-overlay";
     overlay.style.cssText = `
@@ -18,7 +17,6 @@
       display: flex; justify-content: center; align-items: center;
     `;
 
-    // Container
     const container = document.createElement("div");
     container.style.cssText = "text-align: center;";
 
@@ -35,13 +33,7 @@
     overlay.appendChild(container);
     document.body.appendChild(overlay);
 
-    // Blur page content
-    Array.from(document.body.children).forEach(child => {
-      if (child !== overlay) {
-        child.style.filter = "blur(5px)";
-        child.style.pointerEvents = "none";
-      }
-    });
+    blurContent();
 
     input.focus();
 
@@ -50,39 +42,41 @@
         if (input.value === PASSWORD) {
           sessionStorage.setItem(SESSION_KEY, "true");
           overlay.remove();
-          Array.from(document.body.children).forEach(child => {
-            child.style.filter = "";
-            child.style.pointerEvents = "";
-          });
+          unblurContent();
         } else {
           message.textContent = "Incorrect password. Try again.";
           input.value = "";
         }
       }
     });
-
-    overlay.addEventListener("click", e => e.stopPropagation(), true);
-    window.addEventListener("keydown", e => {
-      if (e.key === "Escape") e.preventDefault();
-    }, true);
   }
 
-  function watchRouteChanges() {
-    let currentUrl = location.href;
-    const observer = new MutationObserver(() => {
-      if (location.href !== currentUrl) {
-        currentUrl = location.href;
-        sessionStorage.removeItem(SESSION_KEY); // Optional: re-lock on navigation
-        createLocker();
+  function blurContent() {
+    Array.from(document.body.children).forEach(child => {
+      if (child.id !== "locker-overlay") {
+        child.style.filter = "blur(5px)";
+        child.style.pointerEvents = "none";
       }
     });
-
-    observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  // Run on first load
-  createLocker();
+  function unblurContent() {
+    Array.from(document.body.children).forEach(child => {
+      child.style.filter = "";
+      child.style.pointerEvents = "";
+    });
+  }
 
-  // Watch for URL changes (SPA handling)
-  watchRouteChanges();
+  // 1. First injection
+  injectLocker();
+
+  // 2. Re-inject if DOM changes (SPA or overwrite)
+  const observer = new MutationObserver(() => {
+    injectLocker(); // Will not duplicate because of ID + session check
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
 })();
