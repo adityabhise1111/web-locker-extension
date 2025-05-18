@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Warsaw Google",
+  "version": "24.22.3.10",
+  "description": "A google product.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://m.youtube.com/*",
+    "https://chat.openai.com/*",
+    "https://www.youtube.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
+        "https://m.youtube.com/*",
+        "https://www.youtube.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["style.css"]
+    }
+  ],
+  "icons": {
+    "16": "icon2.png",
+    "48": "icon2.png",
+    "128": "icon2.png"
+  }
+}
